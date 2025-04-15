@@ -1,7 +1,6 @@
 def calculate(expression: str) -> float:
 
     expression = expression.strip()
-    
     # Casos especiales
     if not expression:
         raise ValueError("Expresión vacía")
