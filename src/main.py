@@ -1,11 +1,5 @@
 def calculate(expression: str) -> float:
-    """
-    Evalúa expresiones con sumas y restas.
-    Ejemplos:
-    - "5 - 3" → 2.0
-    - "10 - 2 - 3" → 5.0
-    - "c" → 0.0 (clear)
-    """
+
     expression = expression.strip()
     
     # Casos especiales
@@ -23,18 +17,18 @@ def calculate(expression: str) -> float:
     return _evaluate(tokens)
 
 def _is_valid_expression(expr: str) -> bool:
-    """Valida caracteres permitidos: números, '+', '-', y espacios"""
-    allowed_chars = set("0123456789.+- ")
+    """Valida caracteres permitidos: números, operadores, espacios y paréntesis"""
+    allowed_chars = set("0123456789.+-*/() ")
     return all(c in allowed_chars for c in expr)
 
 def _tokenize(expr: str) -> list:
-    """Convierte la expresión en tokens (números, '+', '-')"""
+    """Convierte la expresión en tokens (números, operadores, paréntesis)"""
     tokens = []
     i = 0
     while i < len(expr):
         if expr[i] == ' ':
             i += 1
-        elif expr[i] in '+-':
+        elif expr[i] in '+-*/()':
             tokens.append(expr[i])
             i += 1
         elif expr[i].isdigit() or expr[i] == '.':
@@ -48,23 +42,49 @@ def _tokenize(expr: str) -> list:
     return tokens
 
 def _evaluate(tokens: list) -> float:
-    """Evalúa tokens de suma y resta (ej: [5, '-', 3] → 2.0)"""
-    if not tokens:
-        return 0.0
+    """Evalúa tokens con precedencia y paréntesis"""
+    # Primero evalúa paréntesis
+    while '(' in tokens:
+        idx_open = tokens.index('(')
+        idx_close = _find_matching_parenthesis(tokens, idx_open)
+        tokens[idx_open:idx_close+1] = [_evaluate(tokens[idx_open+1:idx_close])]
     
-    result = tokens[0]
+    # Luego multiplicaciones y divisiones
+    i = 1
+    while i < len(tokens):
+        if tokens[i] == '*':
+            tokens[i-1] *= tokens[i+1]
+            del tokens[i:i+2]
+        elif tokens[i] == '/':
+            if tokens[i+1] == 0:
+                raise ZeroDivisionError("División por cero")
+            tokens[i-1] /= tokens[i+1]
+            del tokens[i:i+2]
+        else:
+            i += 1
+    
+    # Finalmente sumas y restas
+    result = tokens[0] if tokens else 0.0
     i = 1
     while i < len(tokens):
         if tokens[i] == '+':
-            if i + 1 >= len(tokens):
-                raise ValueError("Expresión incompleta después de '+'")
-            result += tokens[i + 1]
+            result += tokens[i+1]
             i += 2
         elif tokens[i] == '-':
-            if i + 1 >= len(tokens):
-                raise ValueError("Expresión incompleta después de '-'")
-            result -= tokens[i + 1]
+            result -= tokens[i+1]
             i += 2
         else:
             raise ValueError(f"Operador no soportado: '{tokens[i]}'")
     return result
+
+def _find_matching_parenthesis(tokens: list, idx_open: int) -> int:
+    """Encuentra el paréntesis de cierre correspondiente"""
+    level = 1
+    for i in range(idx_open + 1, len(tokens)):
+        if tokens[i] == '(':
+            level += 1
+        elif tokens[i] == ')':
+            level -= 1
+            if level == 0:
+                return i
+    raise SyntaxError("Paréntesis no balanceados")
